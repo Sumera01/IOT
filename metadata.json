@@ -1,0 +1,5 @@
+{
+  "name": "Copy of IoT Sentinel",
+  "description": "A multimodal security audit tool for IoT setups. Upload images or config snippets to detect vulnerabilities, visualize threats, and generate fix code.",
+  "requestFramePermissions": []
+}

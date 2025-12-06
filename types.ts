@@ -1,0 +1,37 @@
+export interface BoundingBox {
+  ymin: number;
+  xmin: number;
+  ymax: number;
+  xmax: number;
+}
+
+export enum Severity {
+  High = 'High',
+  Medium = 'Medium',
+  Low = 'Low',
+}
+
+export interface Threat {
+  id: string;
+  title: string;
+  severity: Severity;
+  description: string;
+  boundingBox?: BoundingBox;
+  fixCode: string;
+  fixExplanation: string;
+  riskProbability: number; // 0-100% probability of exploit
+  mitigatedRiskProbability: number; // 0-100% probability after fix
+}
+
+export interface AuditResult {
+  overallRiskScore: number; // 0-100, where 100 is extremely risky
+  threats: Threat[];
+}
+
+export interface AuditSession {
+  imageUrl?: string;
+  configText?: string;
+  audioData?: string; // Base64 audio string
+  result: AuditResult | null;
+  isSimulated: boolean;
+}
