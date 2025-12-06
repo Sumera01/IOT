@@ -26,8 +26,13 @@ const threatSchema: Schema = {
     fixExplanation: { type: Type.STRING, description: "Brief explanation of what the fix does." },
     riskProbability: { type: Type.NUMBER, description: "Estimated probability (0-100) of this threat being exploited in its current state." },
     mitigatedRiskProbability: { type: Type.NUMBER, description: "Estimated probability (0-100) of exploit AFTER applying the fix." },
+    fixCategory: { 
+        type: Type.STRING, 
+        enum: ['Encryption', 'Network', 'Authentication', 'Device', 'General'],
+        description: "The category of security fix required." 
+    },
   },
-  required: ["id", "title", "severity", "description", "fixCode", "fixExplanation", "riskProbability", "mitigatedRiskProbability"],
+  required: ["id", "title", "severity", "description", "fixCode", "fixExplanation", "riskProbability", "mitigatedRiskProbability", "fixCategory"],
 };
 
 const auditResultSchema: Schema = {
@@ -54,15 +59,12 @@ export async function analyzeIoTSetup(imageUrl?: string, configText?: string, au
   }
 
   if (audioData) {
-    // Determine mime type from data URI if possible, otherwise default to webm/mp4 which are common for browser recording
     let mimeType = "audio/webm"; 
     let data = audioData;
-    
     if (audioData.includes(",")) {
         mimeType = audioData.split(";")[0].split(":")[1];
         data = audioData.split(",")[1];
     }
-
     parts.push({
       inlineData: {
         data: data,
@@ -84,9 +86,10 @@ export async function analyzeIoTSetup(imageUrl?: string, configText?: string, au
     
     Tasks:
     1. Identify threats like exposed ports, weak encryption, physical risks, or bad config.
-    2. Assign a 'riskProbability' (0-100%) for how likely an attack is now.
-    3. Simulate a fix and assign a 'mitigatedRiskProbability' (0-100%) assuming the fix is applied.
-    4. Provide Python fix code.
+    2. Categorize each threat into: 'Encryption' (e.g. TLS, SSL), 'Network' (e.g. Firewall, Ports), 'Authentication' (e.g. Passwords, Keys), 'Device' (e.g. Firmware, Physical), or 'General'.
+    3. Assign a 'riskProbability' (0-100%) for how likely an attack is now.
+    4. Simulate a fix and assign a 'mitigatedRiskProbability' (0-100%) assuming the fix is applied.
+    5. Provide Python fix code.
 
     Output pure JSON matching the schema.
   `;

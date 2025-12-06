@@ -20,7 +20,7 @@ const App: React.FC = () => {
         configText,
         audioData,
         result,
-        isSimulated: false,
+        appliedFixes: [],
       });
     } catch (err: any) {
       setError(err.message || 'Analysis failed. Please try again.');
@@ -30,12 +30,7 @@ const App: React.FC = () => {
   };
 
   const handleSimulateFix = () => {
-    if (session) {
-      setSession({
-        ...session,
-        isSimulated: true,
-      });
-    }
+    // Deprecated in favor of drag and drop
   };
 
   const handleReset = () => {

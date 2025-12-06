@@ -11,6 +11,8 @@ export enum Severity {
   Low = 'Low',
 }
 
+export type FixCategory = 'Encryption' | 'Network' | 'Authentication' | 'Device' | 'General';
+
 export interface Threat {
   id: string;
   title: string;
@@ -21,6 +23,7 @@ export interface Threat {
   fixExplanation: string;
   riskProbability: number; // 0-100% probability of exploit
   mitigatedRiskProbability: number; // 0-100% probability after fix
+  fixCategory: FixCategory; // Category for drag-and-drop matching
 }
 
 export interface AuditResult {
@@ -33,5 +36,13 @@ export interface AuditSession {
   configText?: string;
   audioData?: string; // Base64 audio string
   result: AuditResult | null;
-  isSimulated: boolean;
+  appliedFixes: string[]; // List of applied fix IDs or Categories
+}
+
+export interface FixModule {
+  id: string;
+  category: FixCategory;
+  label: string;
+  icon: string; // Lucide icon name
+  description: string;
 }
