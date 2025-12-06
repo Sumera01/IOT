@@ -22,7 +22,7 @@ const threatSchema: Schema = {
     severity: { type: Type.STRING, enum: ["High", "Medium", "Low"] },
     description: { type: Type.STRING },
     boundingBox: { ...boundingBoxSchema, nullable: true, description: "Bounding box of the device/code area involved. Use 0-1000 scale." },
-    fixCode: { type: Type.STRING, description: "A Python code snippet to mitigate the vulnerability." },
+    fixCode: { type: Type.STRING, description: "Python code snippet OR step-by-step pseudocode if no code is applicable." },
     fixExplanation: { type: Type.STRING, description: "Brief explanation of what the fix does." },
     riskProbability: { type: Type.NUMBER, description: "Estimated probability (0-100) of this threat being exploited in its current state." },
     mitigatedRiskProbability: { type: Type.NUMBER, description: "Estimated probability (0-100) of exploit AFTER applying the fix." },
@@ -71,7 +71,7 @@ export async function analyzeIoTSetup(imageUrl?: string, configText?: string, au
         mimeType: mimeType,
       }
     });
-    parts.push({ text: "The user has provided an audio description of their setup. Transcribe this internally and use it to identify hidden threats or context not visible in the image." });
+    parts.push({ text: "The user has provided an audio description. Transcribe and use it for context." });
   }
 
   if (configText) {
@@ -86,10 +86,10 @@ export async function analyzeIoTSetup(imageUrl?: string, configText?: string, au
     
     Tasks:
     1. Identify threats like exposed ports, weak encryption, physical risks, or bad config.
-    2. Categorize each threat into: 'Encryption' (e.g. TLS, SSL), 'Network' (e.g. Firewall, Ports), 'Authentication' (e.g. Passwords, Keys), 'Device' (e.g. Firmware, Physical), or 'General'.
+    2. Categorize each threat into: 'Encryption', 'Network', 'Authentication', 'Device', or 'General'.
     3. Assign a 'riskProbability' (0-100%) for how likely an attack is now.
     4. Simulate a fix and assign a 'mitigatedRiskProbability' (0-100%) assuming the fix is applied.
-    5. Provide Python fix code.
+    5. Provide specific Python fix code (e.g. paho-mqtt TLS setup, ufw rules). If Python is not applicable (e.g. physical security), provide clear numbered steps in the code block.
 
     Output pure JSON matching the schema.
   `;

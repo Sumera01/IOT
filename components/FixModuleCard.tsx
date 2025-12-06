@@ -1,12 +1,13 @@
 import React from 'react';
 import { Lock, Network, Key, Shield, Cpu } from 'lucide-react';
-import { FixModule } from '../types';
+import { FixModule, FixCategory } from '../types';
 
 interface FixModuleCardProps {
   module: FixModule;
+  onClick?: (category: FixCategory) => void;
 }
 
-const FixModuleCard: React.FC<FixModuleCardProps> = ({ module }) => {
+const FixModuleCard: React.FC<FixModuleCardProps> = ({ module, onClick }) => {
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Lock': return <Lock className="w-5 h-5" />;
@@ -26,7 +27,9 @@ const FixModuleCard: React.FC<FixModuleCardProps> = ({ module }) => {
     <div
       draggable
       onDragStart={handleDragStart}
-      className="p-3 bg-slate-800 border border-slate-700 rounded-xl cursor-grab active:cursor-grabbing hover:bg-slate-700 hover:border-cyan-500 transition-all hover:scale-105 group shadow-lg"
+      onClick={() => onClick && onClick(module.category)}
+      className="p-3 bg-slate-800 border border-slate-700 rounded-xl cursor-grab active:cursor-grabbing hover:bg-slate-700 hover:border-cyan-500 transition-all hover:scale-105 group shadow-lg flex flex-col justify-between h-full touch-manipulation"
+      title="Drag or Click to Apply"
     >
       <div className="flex items-center space-x-3 mb-2">
         <div className="p-2 rounded-lg bg-slate-900 text-cyan-400 group-hover:text-cyan-300">
