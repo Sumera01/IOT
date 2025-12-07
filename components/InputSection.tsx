@@ -67,6 +67,10 @@ const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isAnalyzing }) =
 
       mediaRecorder.onstop = () => {
         const type = mediaRecorder.mimeType || 'audio/webm';
+        if (chunksRef.current.length === 0) {
+            console.warn("No audio chunks recorded");
+            return;
+        }
         const blob = new Blob(chunksRef.current, { type });
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -78,7 +82,8 @@ const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isAnalyzing }) =
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      // Pass timeslice to ensure dataavailable fires periodically (every 200ms)
+      mediaRecorder.start(200);
       setIsRecording(true);
       setAudioData(null); 
     } catch (err) {
@@ -88,7 +93,7 @@ const InputSection: React.FC<InputSectionProps> = ({ onAnalyze, isAnalyzing }) =
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }

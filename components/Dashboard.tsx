@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AuditSession, FixModule, FixCategory } from '../types';
 import ThreatCard from './ThreatCard';
@@ -13,10 +14,18 @@ interface DashboardProps {
 }
 
 const FIX_MODULES: FixModule[] = [
-  { id: 'fix-enc', category: 'Encryption', label: 'Enable TLS/SSL', icon: 'Lock', description: 'Encrypts data in transit.' },
-  { id: 'fix-net', category: 'Network', label: 'Firewall Rules', icon: 'Network', description: 'Blocks unauthorized ports.' },
-  { id: 'fix-auth', category: 'Authentication', label: 'Strong Auth', icon: 'Key', description: 'Enforces robust passwords.' },
-  { id: 'fix-dev', category: 'Device', label: 'Firmware Update', icon: 'Cpu', description: 'Patches known bugs.' },
+  { id: 'fix-enc-tls', category: 'Encryption', label: 'Enable TLS/SSL', icon: 'Lock', description: 'Encrypts data in transit.' },
+  { id: 'fix-enc-keys', category: 'Encryption', label: 'Rotate Keys', icon: 'Lock', description: 'Auto-rotates certificates.' },
+  { id: 'fix-net-fw', category: 'Network', label: 'Firewall Rules', icon: 'Network', description: 'Blocks unauthorized ports.' },
+  { id: 'fix-net-upnp', category: 'Network', label: 'Disable UPnP', icon: 'Network', description: 'Prevents auto-forwarding.' },
+  { id: 'fix-auth-mfa', category: 'Authentication', label: 'Enforce MFA', icon: 'Key', description: 'Requires 2-factor auth.' },
+  { id: 'fix-auth-pwd', category: 'Authentication', label: 'Strong Auth', icon: 'Key', description: 'Enforces robust passwords.' },
+  { id: 'fix-dev-fw', category: 'Device', label: 'Firmware Update', icon: 'Cpu', description: 'Patches known bugs.' },
+  { id: 'fix-dev-boot', category: 'Device', label: 'Secure Boot', icon: 'Cpu', description: 'Verifies OS signature.' },
+  { id: 'fix-phy-jtag', category: 'Physical', label: 'Disable JTAG', icon: 'Cpu', description: 'Locks physical debug ports.' },
+  { id: 'fix-iso-vlan', category: 'Isolation', label: 'VLAN Isolate', icon: 'Shield', description: 'Segments IoT traffic.' },
+  { id: 'fix-mon-logs', category: 'Monitoring', label: 'Enable Logs', icon: 'Activity', description: 'Audits access events.' },
+  { id: 'fix-dat-min', category: 'Data', label: 'Data Privacy', icon: 'Database', description: 'Minimizes stored data.' },
 ];
 
 const Dashboard: React.FC<DashboardProps> = ({ session, onReset }) => {
@@ -35,48 +44,23 @@ const Dashboard: React.FC<DashboardProps> = ({ session, onReset }) => {
   const { threats } = session.result;
   const hasImage = !!session.imageUrl;
 
-  // Initialize Speech Recognition
-  useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US';
+  // Identify recommended categories based on active threats
+  const activeCategories = Array.from(new Set(threats.filter(t => !appliedCategories.includes(t.fixCategory)).map(t => t.fixCategory)));
 
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-        console.log("Command received:", transcript);
-        processVoiceCommand(transcript);
-      };
+  // Sort modules: Recommended first, then alphabetical or standard order
+  const sortedModules = [...FIX_MODULES].sort((a, b) => {
+    const aRec = activeCategories.includes(a.category);
+    const bRec = activeCategories.includes(b.category);
+    if (aRec && !bRec) return -1;
+    if (!aRec && bRec) return 1;
+    return 0;
+  });
 
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
-        setIsListening(false);
-      };
-      
-      recognitionRef.current.onend = () => {
-         if (isListening) recognitionRef.current.start(); 
-      };
-    }
-    return () => {
-      if (recognitionRef.current) recognitionRef.current.stop();
-    };
-  }, [isListening]);
-
-  const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current?.start();
-        setIsListening(true);
-      } catch (e) {
-        console.error("Start failed", e);
-        alert("Microphone access is restricted or not supported.");
-      }
-    }
+  const applyFix = (category: FixCategory) => {
+    setAppliedCategories(prev => {
+        if (prev.includes(category)) return prev;
+        return [...prev, category];
+    });
   };
 
   const processVoiceCommand = (text: string) => {
@@ -91,14 +75,71 @@ const Dashboard: React.FC<DashboardProps> = ({ session, onReset }) => {
     if (text.includes("firewall") || text.includes("network") || text.includes("port")) applyFix('Network');
     if (text.includes("auth") || text.includes("password") || text.includes("login")) applyFix('Authentication');
     if (text.includes("firmware") || text.includes("update") || text.includes("patch")) applyFix('Device');
+    if (text.includes("isolate") || text.includes("vlan") || text.includes("segment")) applyFix('Isolation');
+    if (text.includes("monitor") || text.includes("log") || text.includes("audit")) applyFix('Monitoring');
+    if (text.includes("physical") || text.includes("jtag") || text.includes("debug")) applyFix('Physical');
+    if (text.includes("data") || text.includes("privacy")) applyFix('Data');
     
     if (text.includes("reset") || text.includes("clear")) setAppliedCategories([]);
     if (text.includes("report") || text.includes("export")) handleExportReport();
   };
 
-  const applyFix = (category: FixCategory) => {
-    if (!appliedCategories.includes(category)) {
-      setAppliedCategories(prev => [...prev, category]);
+  // Ref to hold the latest version of processVoiceCommand to avoid stale closures in event listeners
+  const processCommandRef = useRef(processVoiceCommand);
+  useEffect(() => {
+    processCommandRef.current = processVoiceCommand;
+  });
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        console.log("Command received:", transcript);
+        // Call the ref to ensure we use the latest state/logic
+        processCommandRef.current(transcript);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+             setIsListening(false);
+        }
+      };
+      
+      recognitionRef.current.onend = () => {
+         if (isListening) {
+             try {
+                recognitionRef.current.start(); 
+             } catch (e) {
+                 setIsListening(false);
+             }
+         }
+      };
+    }
+    return () => {
+      if (recognitionRef.current) recognitionRef.current.stop();
+    };
+  }, [isListening]); // Re-run only when listening state toggles
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current?.start();
+        setIsListening(true);
+      } catch (e) {
+        console.error("Start failed", e);
+        alert("Microphone access is restricted or not supported.");
+      }
     }
   };
 
@@ -137,20 +178,8 @@ const Dashboard: React.FC<DashboardProps> = ({ session, onReset }) => {
 
     // Base score from initial audit (100 - initial risk)
     const initialBase = Math.max(0, 100 - session.result.overallRiskScore);
-    
-    // Total added to initial base, clamped at 100
-    // If the initial score was low (e.g. 20), we want the improvements to bring it up.
-    // Let's normalize: Start at (100 - Risk), add points as we fix.
-    
-    // Alternative Interpretation of Formula:
-    // Score = (40% * %Fixed) + (30% * %Encryption) + (30% * %RiskReduction) * 100
-    // This gives a 0-100 progress score.
-    const calculatedProgress = fixedRatioScore + encScore + riskScore;
-    
-    // We want the final score to reflect "Security Level".
-    // If calculatedProgress is 100, we should be near 100.
-    // If calculatedProgress is 0, we should be at initialBase.
     const gap = 100 - initialBase;
+    const calculatedProgress = fixedRatioScore + encScore + riskScore;
     const finalScore = initialBase + (calculatedProgress / 100) * gap;
 
     setSecureScore(Math.round(Math.min(100, finalScore)));
@@ -167,11 +196,11 @@ const Dashboard: React.FC<DashboardProps> = ({ session, onReset }) => {
         
         if (activeThreats.length > 0) {
             textToSpeak += `Security alert. ${activeThreats.length} vulnerabilities detected. `;
-            textToSpeak += `High priority: ${activeThreats[0].title}. `;
-            textToSpeak += `Probability of exploit is ${activeThreats[0].riskProbability} percent. `;
-            textToSpeak += `Say 'Fix It' to apply the ${activeThreats[0].fixCategory} protocol.`;
+            textToSpeak += `Highest priority: ${activeThreats[0].title}. `;
+            textToSpeak += `Risk probability is ${activeThreats[0].riskProbability} percent. `;
+            textToSpeak += `Say 'Fix It' to apply the ${activeThreats[0].fixCategory} patch.`;
         } else {
-            textToSpeak += "System Secure. All protocols operational. Threat level zero.";
+            textToSpeak += "System Hardened. All protocols operational. Security score nominal.";
         }
 
         const audioBuffer = await generateAudioGuide(textToSpeak);
@@ -368,9 +397,13 @@ const Dashboard: React.FC<DashboardProps> = ({ session, onReset }) => {
                     <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-cyan-500">DRAG / TAP</span>
                 </h3>
                 <div className="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-3 pb-2 lg:pb-0 scrollbar-hide">
-                    {FIX_MODULES.map(module => (
+                    {sortedModules.map(module => (
                         <div key={module.id} className="min-w-[160px] lg:min-w-0">
-                            <FixModuleCard module={module} onClick={() => applyFix(module.category)} />
+                            <FixModuleCard 
+                                module={module} 
+                                onClick={() => applyFix(module.category)}
+                                isRecommended={activeCategories.includes(module.category)}
+                            />
                         </div>
                     ))}
                 </div>

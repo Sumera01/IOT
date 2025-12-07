@@ -1,3 +1,4 @@
+
 export interface BoundingBox {
   ymin: number;
   xmin: number;
@@ -11,7 +12,7 @@ export enum Severity {
   Low = 'Low',
 }
 
-export type FixCategory = 'Encryption' | 'Network' | 'Authentication' | 'Device' | 'General';
+export type FixCategory = 'Encryption' | 'Network' | 'Authentication' | 'Device' | 'Monitoring' | 'Isolation' | 'General' | 'Physical' | 'Data';
 
 export interface Threat {
   id: string;

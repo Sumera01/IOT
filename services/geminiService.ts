@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Schema, Modality } from "@google/genai";
 import { AuditResult } from "../types";
 
@@ -29,7 +30,7 @@ const threatSchema: Schema = {
     mitigationDetails: { type: Type.STRING, description: "Specific description of the system state after the fix (e.g., 'Traffic moved to TLS port 8883')." },
     fixCategory: { 
         type: Type.STRING, 
-        enum: ['Encryption', 'Network', 'Authentication', 'Device', 'General'],
+        enum: ['Encryption', 'Network', 'Authentication', 'Device', 'Monitoring', 'Isolation', 'General', 'Physical', 'Data'],
         description: "The category of security fix required." 
     },
     cve: { type: Type.STRING, nullable: true, description: "Relevant CVE ID (e.g. CVE-2023-28121) if applicable to the pattern." },
@@ -91,14 +92,21 @@ export async function analyzeIoTSetup(imageUrl?: string, configText?: string, au
     You are IoT Sentinel, a world-class cyber-security auditor for IoT infrastructure.
     Analyze the provided inputs (Image, Audio, Config) multimodal-style to detect vulnerabilities.
     
-    CRITICAL ANALYSIS RULES:
-    1. **Context Fusion**: Combine image (visual devices), audio (user description), and text (config code). If audio says "This is an ESP32", treat visual objects as ESP32.
+    CRITICAL INSTRUCTION:
+    Identify **4 to 6 distinct vulnerabilities**. Do not group them excessively. Separate network issues, device config issues, physical security risks, and code issues into individual threats to allow for granular patching.
+
+    RULES:
+    1. **Context Fusion**: Combine image (visual devices), audio (user description), and text (config code).
     2. **Protocol Specifics**:
-       - **MQTT**: If Port 1883 is exposed/mentioned without TLS, flag as HIGH (Replay/MITM). Suggest Port 8883 + TLS. Cite CVE-2023-28121 if relevant.
-       - **CoAP**: Check for UDP amplification risks.
-       - **HTTP**: If IoT device uses HTTP (not HTTPS), flag as HIGH (Credential Sniffing).
-       - **Default Creds**: If device is generic/unbranded or config shows "admin:admin", flag as HIGH.
-    3. **Probabilistic Scoring (Bayesian)**:
+       - **MQTT**: Check for Port 1883 (No TLS). Flag as HIGH. Fix: Enforce TLS 1.3 on Port 8883.
+       - **CoAP**: Check for UDP amplification risks. Fix: Rate limiting or DTLS.
+       - **HTTP**: Check for plain HTTP. Fix: HTTPS redirect.
+       - **Default Creds**: Generic/unbranded devices. Fix: Strong password enforcement.
+       - **Physical**: Open ports (JTAG/UART) visible on board? FixCategory: Physical.
+       - **Data**: Unencrypted storage or excessive data collection? FixCategory: Data.
+       - **Logging**: Lack of audit trails. FixCategory: Monitoring.
+       - **Network**: Flat network structure. FixCategory: Isolation (VLANs).
+    3. **Probabilistic Scoring**:
        - Base risk on common stats (e.g., Unencrypted MQTT = 80% exploit chance).
        - Mitigation should drop risk significantly (e.g., to <10%).
     4. **False Positives**: If you see 'tls_set()' or 'ssl', score risk LOW.

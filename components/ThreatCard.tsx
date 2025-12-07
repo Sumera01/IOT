@@ -135,8 +135,8 @@ const ThreatCard: React.FC<ThreatCardProps> = ({ threat, isMitigated, onDropMatc
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2 text-slate-300">
                     <Terminal className="w-4 h-4 text-cyan-500" />
-                    <span className="text-sm font-semibold">
-                        {isMitigated ? 'Active Patch Code' : 'Suggested Fix Code'}
+                    <span className="text-sm font-semibold uppercase tracking-wider text-xs">
+                        {isMitigated ? 'Active Patch Applied' : 'Recommended Fix'}
                     </span>
                 </div>
                 <button 
@@ -147,10 +147,15 @@ const ThreatCard: React.FC<ThreatCardProps> = ({ threat, isMitigated, onDropMatc
                     <Copy className="w-4 h-4" />
                 </button>
             </div>
-            <div className="relative">
+            <div className="relative group">
                 <pre className={`p-4 rounded-lg overflow-x-auto border text-sm font-mono transition-colors duration-500 ${isMitigated ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-100/90' : 'bg-slate-950 border-slate-800 text-cyan-100/90'}`}>
                     <code>{threat.fixCode}</code>
                 </pre>
+                {isMitigated && (
+                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded shadow">
+                        DEPLOYED
+                    </div>
+                )}
             </div>
             <p className="mt-3 text-sm text-slate-400 italic border-l-2 border-cyan-500/30 pl-3">
                 {threat.fixExplanation}
@@ -158,7 +163,7 @@ const ThreatCard: React.FC<ThreatCardProps> = ({ threat, isMitigated, onDropMatc
             {!isMitigated && (
                 <div className="mt-4 p-3 bg-blue-900/20 rounded-lg border border-blue-500/20 text-xs text-blue-300 flex items-center">
                     <ArrowRightCircle className="w-4 h-4 mr-2" />
-                    Drag "{threat.fixCategory}" module or say "Fix it" to simulate.
+                    Drag "{threat.fixCategory}" module here or say "Fix it" to simulate.
                 </div>
             )}
           </div>
