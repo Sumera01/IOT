@@ -23,7 +23,9 @@ export interface Threat {
   fixExplanation: string;
   riskProbability: number; // 0-100% probability of exploit
   mitigatedRiskProbability: number; // 0-100% probability after fix
-  fixCategory: FixCategory; // Category for drag-and-drop matching
+  mitigationDetails: string; // Specific text describing the state after fix (e.g. "Port 1883 closed, 8883 open")
+  fixCategory: FixCategory;
+  cve?: string; // Example CVE reference
 }
 
 export interface AuditResult {

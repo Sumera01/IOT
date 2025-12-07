@@ -22,17 +22,19 @@ const threatSchema: Schema = {
     severity: { type: Type.STRING, enum: ["High", "Medium", "Low"] },
     description: { type: Type.STRING },
     boundingBox: { ...boundingBoxSchema, nullable: true, description: "Bounding box of the device/code area involved. Use 0-1000 scale." },
-    fixCode: { type: Type.STRING, description: "Python code snippet OR step-by-step pseudocode if no code is applicable." },
+    fixCode: { type: Type.STRING, description: "Python code snippet (e.g. paho-mqtt, requests) OR step-by-step instructions." },
     fixExplanation: { type: Type.STRING, description: "Brief explanation of what the fix does." },
-    riskProbability: { type: Type.NUMBER, description: "Estimated probability (0-100) of this threat being exploited in its current state." },
-    mitigatedRiskProbability: { type: Type.NUMBER, description: "Estimated probability (0-100) of exploit AFTER applying the fix." },
+    riskProbability: { type: Type.NUMBER, description: "Estimated probability (0-100) of exploit based on IoT stats." },
+    mitigatedRiskProbability: { type: Type.NUMBER, description: "Estimated probability (0-100) AFTER applying the fix." },
+    mitigationDetails: { type: Type.STRING, description: "Specific description of the system state after the fix (e.g., 'Traffic moved to TLS port 8883')." },
     fixCategory: { 
         type: Type.STRING, 
         enum: ['Encryption', 'Network', 'Authentication', 'Device', 'General'],
         description: "The category of security fix required." 
     },
+    cve: { type: Type.STRING, nullable: true, description: "Relevant CVE ID (e.g. CVE-2023-28121) if applicable to the pattern." },
   },
-  required: ["id", "title", "severity", "description", "fixCode", "fixExplanation", "riskProbability", "mitigatedRiskProbability", "fixCategory"],
+  required: ["id", "title", "severity", "description", "fixCode", "fixExplanation", "riskProbability", "mitigatedRiskProbability", "mitigationDetails", "fixCategory"],
 };
 
 const auditResultSchema: Schema = {
@@ -80,18 +82,31 @@ export async function analyzeIoTSetup(imageUrl?: string, configText?: string, au
     });
   }
 
-  const prompt = `
-    You are IoT Sentinel, an expert cyber-security auditor.
-    Analyze the provided inputs (Image, Config, Audio) for security vulnerabilities.
-    
-    Tasks:
-    1. Identify threats like exposed ports, weak encryption, physical risks, or bad config.
-    2. Categorize each threat into: 'Encryption', 'Network', 'Authentication', 'Device', or 'General'.
-    3. Assign a 'riskProbability' (0-100%) for how likely an attack is now.
-    4. Simulate a fix and assign a 'mitigatedRiskProbability' (0-100%) assuming the fix is applied.
-    5. Provide specific Python fix code (e.g. paho-mqtt TLS setup, ufw rules). If Python is not applicable (e.g. physical security), provide clear numbered steps in the code block.
+  // Fallback if inputs are empty
+  if (parts.length === 0) {
+      throw new Error("No input provided. Please upload an image, speak, or paste config.");
+  }
 
-    Output pure JSON matching the schema.
+  const prompt = `
+    You are IoT Sentinel, a world-class cyber-security auditor for IoT infrastructure.
+    Analyze the provided inputs (Image, Audio, Config) multimodal-style to detect vulnerabilities.
+    
+    CRITICAL ANALYSIS RULES:
+    1. **Context Fusion**: Combine image (visual devices), audio (user description), and text (config code). If audio says "This is an ESP32", treat visual objects as ESP32.
+    2. **Protocol Specifics**:
+       - **MQTT**: If Port 1883 is exposed/mentioned without TLS, flag as HIGH (Replay/MITM). Suggest Port 8883 + TLS. Cite CVE-2023-28121 if relevant.
+       - **CoAP**: Check for UDP amplification risks.
+       - **HTTP**: If IoT device uses HTTP (not HTTPS), flag as HIGH (Credential Sniffing).
+       - **Default Creds**: If device is generic/unbranded or config shows "admin:admin", flag as HIGH.
+    3. **Probabilistic Scoring (Bayesian)**:
+       - Base risk on common stats (e.g., Unencrypted MQTT = 80% exploit chance).
+       - Mitigation should drop risk significantly (e.g., to <10%).
+    4. **False Positives**: If you see 'tls_set()' or 'ssl', score risk LOW.
+    
+    OUTPUT FORMAT:
+    Return pure JSON matching the schema. 
+    - 'mitigationDetails' must be specific: "Enables TLS 1.3, moves traffic to port 8883."
+    - 'cve' should be a real or representative ID.
   `;
 
   parts.push({ text: prompt });
@@ -103,7 +118,7 @@ export async function analyzeIoTSetup(imageUrl?: string, configText?: string, au
       config: {
         responseMimeType: "application/json",
         responseSchema: auditResultSchema,
-        systemInstruction: "You are a helpful, precise security expert. Be realistic with risk probabilities.",
+        systemInstruction: "You are a precise, paranoid security expert. Assume worst-case for unencrypted traffic.",
       },
     });
 
@@ -144,7 +159,6 @@ export async function generateAudioGuide(textToSpeak: string): Promise<AudioBuff
     return audioBuffer;
 }
 
-// Helpers for Audio Decoding
 function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Copy, Terminal, Zap, ArrowRightCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Copy, Terminal, Zap, ArrowRightCircle, ShieldAlert } from 'lucide-react';
 import { Threat, Severity, FixCategory } from '../types';
 
 interface ThreatCardProps {
@@ -72,8 +72,14 @@ const ThreatCard: React.FC<ThreatCardProps> = ({ threat, isMitigated, onDropMatc
                 <h4 className={`font-semibold text-lg ${isMitigated ? 'text-slate-300 line-through decoration-emerald-500/50' : 'text-slate-100'}`}>
                 {threat.title}
                 </h4>
-                <div className="flex items-center space-x-2 mt-1">
+                <div className="flex flex-wrap items-center gap-2 mt-1">
                      <p className="text-sm text-slate-400">{threat.description}</p>
+                     {threat.cve && !isMitigated && (
+                        <span className="text-[10px] bg-rose-950 text-rose-300 px-1.5 py-0.5 rounded border border-rose-800 flex items-center">
+                            <ShieldAlert className="w-3 h-3 mr-1" />
+                            {threat.cve}
+                        </span>
+                     )}
                      {!isMitigated && (
                          <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">
                              Req: {threat.fixCategory}
@@ -110,11 +116,15 @@ const ThreatCard: React.FC<ThreatCardProps> = ({ threat, isMitigated, onDropMatc
                     style={{ width: `${isMitigated ? threat.mitigatedRiskProbability : 0}%` }}
                  />
              </div>
+             
+             {/* Mitigation Reason */}
              {isMitigated && (
-                 <p className="text-xs text-emerald-400/80 mt-1 font-mono flex items-center">
-                     <Zap className="w-3 h-3 mr-1" />
-                     {threat.fixCategory} Patch applied: Risk reduced by {threat.riskProbability - threat.mitigatedRiskProbability}%
-                 </p>
+                 <div className="mt-2 p-2 bg-emerald-950/30 rounded border border-emerald-500/20">
+                    <p className="text-xs text-emerald-400/90 font-mono flex items-center">
+                        <Zap className="w-3 h-3 mr-1.5" />
+                        {threat.mitigationDetails}
+                    </p>
+                 </div>
              )}
         </div>
       </div>
@@ -132,6 +142,7 @@ const ThreatCard: React.FC<ThreatCardProps> = ({ threat, isMitigated, onDropMatc
                 <button 
                   className="text-slate-500 hover:text-cyan-400 transition-colors"
                   onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(threat.fixCode); }}
+                  title="Copy Code"
                 >
                     <Copy className="w-4 h-4" />
                 </button>
@@ -147,7 +158,7 @@ const ThreatCard: React.FC<ThreatCardProps> = ({ threat, isMitigated, onDropMatc
             {!isMitigated && (
                 <div className="mt-4 p-3 bg-blue-900/20 rounded-lg border border-blue-500/20 text-xs text-blue-300 flex items-center">
                     <ArrowRightCircle className="w-4 h-4 mr-2" />
-                    Drag the "{threat.fixCategory}" module here to simulate this fix.
+                    Drag "{threat.fixCategory}" module or say "Fix it" to simulate.
                 </div>
             )}
           </div>
